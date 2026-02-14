@@ -1,0 +1,258 @@
+import { useState } from 'react';
+import { ArrowLeft, Save, User2Icon, Mail, Phone, BookOpen, GraduationCap, Calendar, Hash } from 'lucide-react';
+
+export default function UserProfile({ onBack }) {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    sjsuId: '',
+    email: '',
+    phone: '',
+    major: '',
+    minor: '',
+    expectedGraduation: '',
+    year: 'Freshman',
+    gpa: '',
+  });
+
+  const [saved, setSaved] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setSaved(false);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Save logic here (e.g., API call)
+    console.log('User profile saved:', formData);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const inputClass =
+    "w-full bg-bg-surface border border-border-color rounded-lg px-4 py-3 text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-sjsu-gold/40 focus:border-sjsu-gold transition-all";
+
+  const labelClass = "block text-sm font-semibold text-text-secondary mb-1.5 uppercase tracking-wide";
+
+  return (
+    <div className="flex-1 flex flex-col bg-bg-main overflow-y-auto transition-colors duration-300">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-bg-main/80 backdrop-blur-md border-b border-border-color px-8 py-5 flex items-center gap-4">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-lg hover:bg-bg-hover transition-colors text-text-secondary hover:text-text-primary"
+          title="Back to Chat"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">User Profile</h1>
+          <p className="text-sm text-text-secondary">Enter your details to personalize your experience</p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <div className="flex-1 flex justify-center px-8 py-10">
+        <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-8">
+          
+          {/* Avatar Section */}
+          <div className="flex items-center gap-6 pb-6 border-b border-border-color">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-sjsu-gold to-orange-400 flex items-center justify-center shrink-0 shadow-lg">
+              <User2Icon size={36} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-text-primary">
+                {formData.firstName || formData.lastName
+                  ? `${formData.firstName} ${formData.lastName}`.trim()
+                  : 'Your Name'}
+              </h2>
+              <p className="text-sm text-text-secondary">
+                {formData.email || 'your.email@sjsu.edu'}
+              </p>
+            </div>
+          </div>
+
+          {/* Personal Information */}
+          <div>
+            <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+              <User2Icon size={18} className="text-sjsu-gold" />
+              Personal Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>First Name</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  placeholder="John"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Last Name</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  placeholder="Doe"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>SJSU Student ID</label>
+                <div className="relative">
+                  <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                  <input
+                    type="text"
+                    name="sjsuId"
+                    value={formData.sjsuId}
+                    onChange={handleChange}
+                    placeholder="012345678"
+                    className={`${inputClass} pl-10`}
+                    maxLength={9}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Phone Number</label>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="(408) 555-1234"
+                    className={`${inputClass} pl-10`}
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelClass}>SJSU Email</label>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="john.doe@sjsu.edu"
+                    className={`${inputClass} pl-10`}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Academic Information */}
+          <div>
+            <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+              <GraduationCap size={18} className="text-sjsu-gold" />
+              Academic Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>Major</label>
+                <div className="relative">
+                  <BookOpen size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                  <input
+                    type="text"
+                    name="major"
+                    value={formData.major}
+                    onChange={handleChange}
+                    placeholder="Computer Science"
+                    className={`${inputClass} pl-10`}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Minor (Optional)</label>
+                <div className="relative">
+                  <BookOpen size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                  <input
+                    type="text"
+                    name="minor"
+                    value={formData.minor}
+                    onChange={handleChange}
+                    placeholder="Mathematics"
+                    className={`${inputClass} pl-10`}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Year</label>
+                <select
+                  name="year"
+                  value={formData.year}
+                  onChange={handleChange}
+                  className={inputClass}
+                  required
+                >
+                  <option value="Freshman">Freshman</option>
+                  <option value="Sophomore">Sophomore</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Senior">Senior</option>
+                  <option value="Graduate">Graduate</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>GPA</label>
+                <input
+                  type="number"
+                  name="gpa"
+                  value={formData.gpa}
+                  onChange={handleChange}
+                  placeholder="3.50"
+                  className={inputClass}
+                  min="0"
+                  max="4"
+                  step="0.01"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelClass}>Expected Graduation</label>
+                <div className="relative">
+                  <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                  <input
+                    type="month"
+                    name="expectedGraduation"
+                    value={formData.expectedGraduation}
+                    onChange={handleChange}
+                    className={`${inputClass} pl-10`}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex items-center gap-4 pt-4 pb-8">
+            <button
+              type="submit"
+              className="flex items-center gap-2 bg-sjsu-gold hover:bg-sjsu-gold-hover text-white font-semibold px-8 py-3 rounded-lg transition-colors shadow-md hover:shadow-lg"
+            >
+              <Save size={18} />
+              Save Profile
+            </button>
+            {saved && (
+              <span className="text-green-600 dark:text-green-400 text-sm font-medium animate-fade-in">
+                Profile saved successfully!
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
