@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'LEMONMILK';
+  src: url('./assets/san serif font/LEMONMILK-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LEMONMILK';
+  src: url('./assets/san serif font/LEMONMILK-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LEMONMILK';
+  src: url('./assets/san serif font/LEMONMILK-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LEMONMILK';
+  src: url('./assets/san serif font/LEMONMILK-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -30,11 +58,11 @@
 
 :root {
   /* LIGHT MODE - Clean & Modern Blue Theme */
-  --bg-main: #F8FAFC;        /* Light Slate/Cool Gray background */
+  --bg-main: #FFFFFF;        /* Pure white background */
   --bg-sidebar: #0055A2;     /* User's choice: SJSU Blue */
-  --bg-surface: #FFFFFF;     /* White surface for cards/panels */
+  --bg-surface: #F9FAFB;     /* Very light gray surface for cards/panels */
   --bg-input: #FFFFFF;       /* White input */
-  --bg-hover: #F1F5F9;       /* Light gray hover */
+  --bg-hover: #F3F4F6;       /* Clean gray hover */
 
   --text-primary: #0F172A;   /* Dark Slate (almost black) */
   --text-secondary: #4b5664; /* Slate Gray */
