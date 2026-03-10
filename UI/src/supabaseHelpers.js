@@ -31,9 +31,9 @@ export const updateProfile = async (userId, updates) => {
 };
 
 // Ensure a profile row exists for the given auth user.
-// Prevents duplicates: checks by id first, then by email (covers
-// the case where a user signs up with email/password and later
+// Prevents duplicates: checks by id first, then by email (Use Case: a user signs up with email/password and later
 // logs in with Google using the same @sjsu.edu address).
+
 export const ensureProfile = async (user) => {
   if (!user?.id) return null;
 
@@ -47,7 +47,7 @@ export const ensureProfile = async (user) => {
   if (byId) return byId;
 
   // 2. Check if a profile exists for the same email (linked to a
-  //    different auth identity — e.g. email/password vs Google OAuth).
+  //    different auth identity -- e.g. email/password vs Google OAuth).
   const { data: byEmail } = await supabase
     .from('profiles')
     .select('*')
