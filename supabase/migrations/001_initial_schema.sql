@@ -10,10 +10,6 @@ create extension if not exists "vector";   -- pgvector for RAG
 
 -- 1. PROFILES (linked to auth.users)
 
--- Duplicating email here for convenience in queries/RLS without
--- joining auth.users (which lives in a separate schema).
--- Always treat auth.users as the source of truth for login email.
-
 create table if not exists public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   email         text not null,
@@ -31,7 +27,6 @@ create table if not exists public.profiles (
   updated_at    timestamptz not null default now()
 );
 
--- Auto-update updated_at on every row change
 create or replace function public.handle_updated_at()
 returns trigger as $$
 begin
@@ -45,9 +40,6 @@ create trigger on_profiles_updated
   for each row execute function public.handle_updated_at();
 
 -- 2. AUTO-CREATE PROFILE ON SIGNUP
-
--- This trigger fires when a new row appears in auth.users.
--- It copies email + full_name from user metadata into profiles.
 
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -69,13 +61,6 @@ create trigger on_auth_user_created
 
 -- 3. DOMAIN RESTRICTION — @sjsu.edu only
 
--- Database-level check: reject any signup whose email is not @sjsu.edu.
--- Supabase does not officially support triggers that ABORT on auth.users,
--- so the safest pattern is a check function called from a BEFORE trigger.
--- NOTE: Supabase managed auth may not fire BEFORE triggers on auth.users
--- in all plans. We add it as a safety net; the primary enforcement is on
--- the frontend and optionally via a Supabase Edge Function.
-
 create or replace function public.enforce_sjsu_email()
 returns trigger as $$
 begin
@@ -86,15 +71,14 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Attempt to add the guard (will silently no-op if auth.users triggers
--- are not supported on your Supabase plan).
+-- Attempt to add the guard against non-SJSU emails at the database level.
 do $$
 begin
   create trigger enforce_sjsu_domain
     before insert on auth.users
     for each row execute function public.enforce_sjsu_email();
 exception when others then
-  raise notice 'Could not create trigger on auth.users — enforce domain in frontend/Edge Function instead.';
+  raise notice 'Could not create trigger on auth.users — enforce domain in Edge Function instead.';
 end;
 $$;
 
@@ -114,8 +98,7 @@ create policy "Users can update own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- Insert is allowed so the app can self-create a profile row
--- after Google OAuth (where the DB trigger may not fire).
+-- Insert is allowed so the app can self-create a profile row after Google OAuth
 create policy "Users can insert own profile"
   on public.profiles for insert
   with check (auth.uid() = id);
@@ -281,7 +264,7 @@ create policy "Authenticated users can read document chunks"
   using (auth.role() = 'authenticated');
 
 -- Only service_role (backend) can insert/update/delete RAG documents.
--- No explicit user-facing insert/update/delete policies needed.
+-- No explicit user-facing insert/update/delete policies.
 
 
 -- 10. SEMANTIC SEARCH FUNCTION
