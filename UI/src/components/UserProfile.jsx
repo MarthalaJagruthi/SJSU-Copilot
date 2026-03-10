@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Save, User2Icon, Mail, Phone, BookOpen, GraduationCap, Calendar, Hash } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
-export default function UserProfile({ onBack }) {
+export default function UserProfile({ onBack, user }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -16,6 +17,36 @@ export default function UserProfile({ onBack }) {
   });
 
   const [saved, setSaved] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Load profile from Supabase on mount
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!user?.id) { setLoadingProfile(false); return; }
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        const nameParts = (data.full_name || '').split(' ');
+        setFormData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          sjsuId: data.university_id || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          major: data.major || '',
+          minor: data.minor || '',
+          expectedGraduation: data.graduation_year ? `${data.graduation_year}-05` : '',
+          year: data.class_standing || 'Freshman',
+          gpa: data.gpa ?? '',
+        });
+      }
+      setLoadingProfile(false);
+    }
+    fetchProfile();
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,12 +54,28 @@ export default function UserProfile({ onBack }) {
     setSaved(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Save logic here (e.g., API call)
-    console.log('User profile saved:', formData);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    const gradYear = formData.expectedGraduation
+      ? parseInt(formData.expectedGraduation.split('-')[0], 10)
+      : null;
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        university_id: formData.sjsuId || null,
+        phone: formData.phone || null,
+        major: formData.major || null,
+        minor: formData.minor || null,
+        graduation_year: gradYear,
+        class_standing: formData.year,
+        gpa: formData.gpa ? parseFloat(formData.gpa) : null,
+      })
+      .eq('id', user.id);
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
   };
 
   const inputClass =
