@@ -74,58 +74,7 @@ export const ensureProfile = async (user) => {
   return data;
 };
 
-// Conversations
-
-export const getConversations = async (userId) => {
-  const { data, error } = await supabase
-    .from('saved_conversations')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
-  return { data, error };
-};
-
-export const createConversation = async (userId, title = 'New Conversation') => {
-  const { data, error } = await supabase
-    .from('saved_conversations')
-    .insert({ user_id: userId, title })
-    .select()
-    .single();
-  return { data, error };
-};
-
-export const deleteConversation = async (conversationId) => {
-  const { error } = await supabase
-    .from('saved_conversations')
-    .delete()
-    .eq('id', conversationId);
-  return { error };
-};
-
-// Chat messages
-
-export const getMessages = async (conversationId) => {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .select('*')
-    .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true });
-  return { data, error };
-};
-
-export const insertMessage = async ({ conversationId, userId, role, content }) => {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .insert({
-      conversation_id: conversationId,
-      user_id: userId,
-      role,
-      content,
-    })
-    .select()
-    .single();
-  return { data, error };
-};
+// Conversations & Messages — see services/chatService.js
 
 // Uploaded documents
 
