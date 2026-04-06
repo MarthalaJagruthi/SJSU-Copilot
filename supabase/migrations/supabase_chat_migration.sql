@@ -1,10 +1,7 @@
 -- ============================================================
 -- Chat Feature Migration
--- Run this in Supabase SQL Editor (Dashboard > SQL Editor)
--- ============================================================
 
 -- 1. Tables
--- ============================================================
 
 create table if not exists conversations (
   id uuid primary key default gen_random_uuid(),
@@ -24,7 +21,6 @@ create table if not exists messages (
 );
 
 -- 2. Indexes
--- ============================================================
 
 create index if not exists idx_conversations_user_updated
 on conversations(user_id, updated_at desc);
@@ -33,7 +29,6 @@ create index if not exists idx_messages_conversation_created
 on messages(conversation_id, created_at desc);
 
 -- 3. Row Level Security
--- ============================================================
 
 alter table conversations enable row level security;
 
