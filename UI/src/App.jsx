@@ -23,6 +23,15 @@ import {
   deleteMessagesAfter,
   autoTitleIfNeeded,
 } from './services/chatService';
+import {
+  fetchProjects,
+  createProject,
+  renameProject,
+  deleteProject,
+  fetchProjectConversations,
+  assignConversationToProject,
+  unassignConversationFromProject,
+} from './services/projectService';
 import './App.css';
 
 export default function App() {
@@ -168,6 +177,12 @@ export default function App() {
   const messagesEndRef = useRef(null);
   const abortRef = useRef(null);
 
+  // Project state
+  const [projects, setProjects] = useState([]);
+  const [projectConversations, setProjectConversations] = useState({}); // { projectId: [convos] }
+  const [expandedProjects, setExpandedProjects] = useState({});
+  const [activeProjectId, setActiveProjectId] = useState(null); // project context for new chats
+
   // Apply dark mode class to html element
   useEffect(() => {
     if (isDarkMode) {
@@ -229,6 +244,117 @@ export default function App() {
     const oldest = conversations[conversations.length - 1];
     loadConversations(oldest.updated_at);
   }, [hasMoreConversations, conversations, loadConversations]);
+
+  // ── Load projects when user logs in ──────────────────────
+  const loadProjects = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const data = await fetchProjects();
+      setProjects(data);
+    } catch (err) {
+      console.error('Failed to load projects:', err.message);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+
+  const loadProjectConvos = useCallback(async (projectId) => {
+    try {
+      const convos = await fetchProjectConversations(projectId);
+      setProjectConversations(prev => ({ ...prev, [projectId]: convos }));
+    } catch (err) {
+      console.error('Failed to load project conversations:', err.message);
+    }
+  }, []);
+
+  // ── Project handlers ──────────────────────────────────────
+  const handleCreateProject = async (name) => {
+    if (!user?.id) return;
+    try {
+      const project = await createProject(user.id, name);
+      setProjects(prev => [project, ...prev]);
+      setExpandedProjects(prev => ({ ...prev, [project.id]: true }));
+      setProjectConversations(prev => ({ ...prev, [project.id]: [] }));
+    } catch (err) {
+      console.error('Create project failed:', err.message);
+    }
+  };
+
+  const handleRenameProject = async (projectId, newName) => {
+    try {
+      await renameProject(projectId, newName);
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, name: newName } : p));
+    } catch (err) {
+      console.error('Rename project failed:', err.message);
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    try {
+      await deleteProject(projectId);
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setProjectConversations(prev => {
+        const next = { ...prev };
+        delete next[projectId];
+        return next;
+      });
+      if (activeProjectId === projectId) setActiveProjectId(null);
+      // Reload standalone conversations — unlinked convos will appear there
+      loadConversations();
+    } catch (err) {
+      console.error('Delete project failed:', err.message);
+    }
+  };
+
+  const handleToggleProject = useCallback((projectId) => {
+    setExpandedProjects(prev => {
+      const nowExpanded = !prev[projectId];
+      if (nowExpanded) loadProjectConvos(projectId);
+      return { ...prev, [projectId]: nowExpanded };
+    });
+  }, [loadProjectConvos]);
+
+  const handleNewChatInProject = (projectId) => {
+    setActiveProjectId(projectId);
+    setCurrentConversationId(null);
+    setMessages([]);
+    setRightPanelContent('empty');
+    setCurrentPage('chat');
+  };
+
+  const handleAssignToProject = async (conversationId, projectId) => {
+    try {
+      await assignConversationToProject(conversationId, projectId);
+      // Remove from standalone list
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+      // Refresh project's conversation list
+      loadProjectConvos(projectId);
+      // Expand the target project
+      setExpandedProjects(prev => ({ ...prev, [projectId]: true }));
+    } catch (err) {
+      console.error('Assign to project failed:', err.message);
+    }
+  };
+
+  const handleRemoveFromProject = async (conversationId) => {
+    try {
+      await unassignConversationFromProject(conversationId);
+      // Remove from all project conversation lists
+      setProjectConversations(prev => {
+        const next = {};
+        for (const [pid, convos] of Object.entries(prev)) {
+          next[pid] = convos.filter(c => c.id !== conversationId);
+        }
+        return next;
+      });
+      // Reload standalone conversations
+      loadConversations();
+    } catch (err) {
+      console.error('Remove from project failed:', err.message);
+    }
+  };
 
   // ── Open a conversation ───────────────────────────────────
   const openConversation = useCallback(async (conversationId) => {
@@ -301,11 +427,18 @@ export default function App() {
       // Create conversation on first message if needed
       let convoId = currentConversationId;
       if (!convoId) {
-        const convo = await createConversation(user.id);
+        const convo = await createConversation(user.id, null, activeProjectId);
         convoId = convo.id;
         setCurrentConversationId(convoId);
-        // Add to sidebar immediately
-        setConversations(prev => [convo, ...prev]);
+        // Add to sidebar — either in project or standalone
+        if (activeProjectId) {
+          setProjectConversations(prev => ({
+            ...prev,
+            [activeProjectId]: [convo, ...(prev[activeProjectId] || [])],
+          }));
+        } else {
+          setConversations(prev => [convo, ...prev]);
+        }
       }
 
       // Persist user message
@@ -508,6 +641,7 @@ export default function App() {
   // ── New chat ──────────────────────────────────────────────
   const startNewChat = () => {
     setCurrentConversationId(null);
+    setActiveProjectId(null);
     setMessages([]);
     setRightPanelContent('empty');
     setCurrentPage('chat');
@@ -529,6 +663,14 @@ export default function App() {
     try {
       await deleteConversation(convoId);
       setConversations(prev => prev.filter(c => c.id !== convoId));
+      // Also remove from project conversation lists
+      setProjectConversations(prev => {
+        const next = {};
+        for (const [pid, convos] of Object.entries(prev)) {
+          next[pid] = convos.filter(c => c.id !== convoId);
+        }
+        return next;
+      });
       if (currentConversationId === convoId) {
         setCurrentConversationId(null);
         setMessages([]);
@@ -559,6 +701,10 @@ export default function App() {
     setCurrentConversationId(null);
     setRightPanelContent('empty');
     setCurrentPage('chat');
+    setProjects([]);
+    setProjectConversations({});
+    setExpandedProjects({});
+    setActiveProjectId(null);
   };
 
   // Show loading while checking session
@@ -599,6 +745,16 @@ export default function App() {
         onDeleteConversation={handleDeleteConversation}
         hasMoreConversations={hasMoreConversations}
         onLoadMoreConversations={loadMoreConversations}
+        projects={projects}
+        projectConversations={projectConversations}
+        onCreateProject={handleCreateProject}
+        onRenameProject={handleRenameProject}
+        onDeleteProject={handleDeleteProject}
+        onNewChatInProject={handleNewChatInProject}
+        onToggleProject={handleToggleProject}
+        expandedProjects={expandedProjects}
+        onAssignToProject={handleAssignToProject}
+        onRemoveFromProject={handleRemoveFromProject}
       />
       
       {currentPage === 'profile' ? (
