@@ -3,13 +3,14 @@ import { supabase } from '../supabaseClient';
 // ── Conversations ────────────────────────────────────────────
 
 /**
- * Fetch conversations for the sidebar, sorted by most recent.
+ * Fetch standalone conversations (no project) for the sidebar, sorted by most recent.
  * Uses cursor-based pagination on updated_at.
  */
 export async function fetchConversations({ limit = 20, cursor = null } = {}) {
   let query = supabase
     .from('conversations')
-    .select('id, title, last_message_preview, updated_at')
+    .select('id, title, last_message_preview, updated_at, project_id')
+    .is('project_id', null)
     .order('updated_at', { ascending: false })
     .limit(limit);
 
@@ -24,11 +25,14 @@ export async function fetchConversations({ limit = 20, cursor = null } = {}) {
 
 /**
  * Create a new conversation. Title can be null (auto-generated later).
+ * Pass projectId to create inside a project.
  */
-export async function createConversation(userId, title = null) {
+export async function createConversation(userId, title = null, projectId = null) {
+  const row = { user_id: userId, title };
+  if (projectId) row.project_id = projectId;
   const { data, error } = await supabase
     .from('conversations')
-    .insert({ user_id: userId, title })
+    .insert(row)
     .select()
     .single();
   if (error) throw error;
